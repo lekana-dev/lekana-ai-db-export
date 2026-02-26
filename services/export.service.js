@@ -1,11 +1,12 @@
 /**
  * Export Service
  * Handles data extraction, transformation, and database insertion
+ * Supports PostgreSQL, MySQL, and MongoDB via the Adapter Pattern.
  */
 const schemaService = require("./schema.service");
-const databaseService = require("./database.service");
 const geminiService = require("./gemini.service");
 const { decrypt } = require("../utils/crypto.utils");
+const { getAdapter, getSupportedTypes } = require("../adapters/AdapterFactory");
 
 /**
  * Extract records from input data using field mapping
@@ -312,7 +313,8 @@ async function insertRecords(client, tableName, records, onConflict) {
 
 
 /**
-* Process the full export request (previously in server.js)
+* Process the full export request — database-agnostic via Adapter Pattern.
+* Supports PostgreSQL, MySQL, and MongoDB.
 * @param {Object} params
 * @param {string} params.executionId
 * @param {string} params.nodeId
@@ -401,8 +403,10 @@ async function processExportRequest({
     throw new Error("No data provided in input");
   }
 
-  // Connect to user's database
-  const client = await databaseService.connect(databaseUrl);
+  // ── Get the correct adapter based on the URL ──
+  const adapter = getAdapter(databaseUrl);
+  console.log(`[Export-Service] Using ${adapter.getType()} adapter`);
+  await adapter.connect();
 
   try {
     // Extract records from input data
@@ -423,20 +427,14 @@ async function processExportRequest({
     let fieldMappingApplied = null;
     let finalSchema = inferredSchema;
 
-    // Check if table exists first
-    const tableAlreadyExists = await schemaService.tableExists(
-      client,
-      tableName
-    );
+    // Check if table/collection exists first (via adapter)
+    const tableAlreadyExists = await adapter.containerExists(tableName);
 
     if (useSmartMapping && records.length > 0 && tableAlreadyExists) {
-      const existingColumns = await schemaService.getExistingColumns(
-        client,
-        tableName
-      );
-      const existingColumnsArray = [...existingColumns];
+      const existingFields = await adapter.getExistingFields(tableName);
+      const existingFieldsArray = [...existingFields];
 
-      if (existingColumnsArray.length > 0) {
+      if (existingFieldsArray.length > 0) {
         const incomingFields = Object.keys(records[0]).filter(
           (f) => !f.startsWith("_")
         );
@@ -445,13 +443,13 @@ async function processExportRequest({
           `[Export-Service] Smart mapping: incoming fields = ${incomingFields.join(", ")}`
         );
         console.log(
-          `[Export-Service] Smart mapping: existing columns = ${existingColumnsArray.join(", ")}`
+          `[Export-Service] Smart mapping: existing fields = ${existingFieldsArray.join(", ")}`
         );
 
         // Use Gemini to map fields to columns
         const mappingResult = await geminiService.mapFieldsToColumns(
           incomingFields,
-          existingColumnsArray
+          existingFieldsArray
         );
 
         if (mappingResult.tokensUsed) {
@@ -477,18 +475,13 @@ async function processExportRequest({
       }
     }
 
-    // Handle table creation/validation
+    // Handle table/collection creation/validation (via adapter)
     if (mode === "auto") {
-      await schemaService.ensureTable(
-        client,
-        tableName,
-        finalSchema,
-        includeMetadata
-      );
+      await adapter.ensureSchema(tableName, finalSchema, includeMetadata);
     } else {
       if (!tableAlreadyExists) {
         throw new Error(
-          `Table "${tableName}" does not exist. Use mode="auto" to create it.`
+          `Table/Collection "${tableName}" does not exist. Use mode="auto" to create it.`
         );
       }
     }
@@ -506,9 +499,8 @@ async function processExportRequest({
       return record;
     });
 
-    // Insert records
-    const insertResult = await insertRecords(
-      client,
+    // Insert records (via adapter)
+    const insertResult = await adapter.insertRecords(
       tableName,
       enrichedRecords,
       onConflict
@@ -516,7 +508,7 @@ async function processExportRequest({
 
     const processingTime = Date.now() - startTime;
     console.log(
-      `[Export-Service] Completed in ${processingTime}ms - ${insertResult.inserted} rows inserted`
+      `[Export-Service] Completed in ${processingTime}ms - ${insertResult.inserted} records inserted`
     );
 
     return {
@@ -532,13 +524,14 @@ async function processExportRequest({
       metadata: {
         processingTime,
         mode,
+        databaseType: adapter.getType(),
         databaseConnected: true,
         tokensUsed: geminiTokensUsed ? geminiTokensUsed.totalTokens : 0,
         smartMappingUsed: !!fieldMappingApplied,
       },
     };
   } finally {
-    await databaseService.disconnect(client);
+    await adapter.disconnect();
   }
 }
 
@@ -546,7 +539,7 @@ module.exports = {
   extractRecords,
   extractSingleRecord,
   getValueByPath,
-  insertRecords,
   flattenOcrFields,
   processExportRequest,
 };
+

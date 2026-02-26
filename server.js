@@ -1,6 +1,6 @@
 /**
  * DB Export Service - Main Entry Point
- * Exports workflow data to SQL databases
+ * Universal database export - supports PostgreSQL, MySQL, MongoDB
  * Port: 4005
  */
 require("dotenv").config();
@@ -12,12 +12,12 @@ const {
   handleAuthError,
   extractUserInfo,
 } = require("./middleware/auth.middleware");
-const databaseService = require("./services/database.service");
+const { getAdapter, getSupportedTypes } = require("./adapters/AdapterFactory");
 const exportService = require("./services/export.service");
 
 const app = express();
 const PORT = process.env.PORT || 4005;
-const SERVICE_VERSION = "1.0.0";
+const SERVICE_VERSION = "2.0.0";
 
 // Middleware
 app.use(express.json({ limit: "50mb" }));
@@ -31,6 +31,21 @@ app.get("/health", (req, res) => {
     status: "ok",
     service: "db-export-service",
     version: SERVICE_VERSION,
+    supportedDatabases: getSupportedTypes(),
+  });
+});
+
+// ============================================
+// Supported Databases Endpoint
+// ============================================
+app.get("/api/v1/supported-databases", (req, res) => {
+  res.json({
+    databases: getSupportedTypes(),
+    urlFormats: {
+      postgresql: "postgresql://user:password@host:5432/database",
+      mysql: "mysql://user:password@host:3306/database",
+      mongodb: "mongodb://user:password@host:27017/database",
+    },
   });
 });
 
@@ -47,10 +62,17 @@ app.post("/api/v1/test-connection", async (req, res) => {
     });
   }
 
-  console.log("[DB-Export] Testing connection...");
-  const result = await databaseService.testConnection(databaseUrl);
-
-  res.json(result);
+  try {
+    console.log("[DB-Export] Testing connection...");
+    const adapter = getAdapter(databaseUrl);
+    const result = await adapter.testConnection();
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
 });
 
 // ============================================

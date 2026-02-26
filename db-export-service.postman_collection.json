@@ -12,7 +12,7 @@
     },
     {
       "key": "testDatabaseUrl",
-      "value": "postgresql://user:password@host:5432/testdb",
+      "value": "postgresql://neondb_owner:npg_hym63caVwqbN@ep-restless-bush-ahhauf5i-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
       "type": "string"
     }
   ],
@@ -24,8 +24,40 @@
         "header": [],
         "url": {
           "raw": "{{baseUrl}}/health",
-          "host": ["{{baseUrl}}"],
-          "path": ["health"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Test Connection",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"databaseUrl\": \"{{testDatabaseUrl}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/test-connection",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "test-connection"
+          ]
         }
       },
       "response": []
@@ -46,8 +78,14 @@
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/process",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "v1", "process"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "process"
+          ]
         }
       },
       "response": []
@@ -68,8 +106,14 @@
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/process",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "v1", "process"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "process"
+          ]
         }
       },
       "response": []
@@ -90,8 +134,14 @@
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/process",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "v1", "process"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "process"
+          ]
         }
       },
       "response": []
@@ -112,8 +162,14 @@
         },
         "url": {
           "raw": "{{baseUrl}}/api/v1/process",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "v1", "process"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "process"
+          ]
         }
       },
       "response": []
