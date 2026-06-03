@@ -19,6 +19,7 @@ EXPOSE 4005
 # Set environment variable defaults
 ENV NODE_ENV=production
 ENV PORT=4005
+ENV GEMINI_MODEL=gemini-2.0-flash
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
