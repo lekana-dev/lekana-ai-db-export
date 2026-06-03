@@ -15,8 +15,9 @@ if (!process.env.GEMINI_API_KEY) {
 const genAI = process.env.GEMINI_API_KEY
   ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
   : null;
+const geminiModelName = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 const model = genAI
-  ? genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
+  ? genAI.getGenerativeModel({ model: geminiModelName })
   : null;
 
 /**
