@@ -97,7 +97,13 @@ app.post(
 // ============================================
 // Start Server
 // ============================================
-app.listen(PORT, () => {
-  console.log(`DB Export service running on port ${PORT}`);
-  console.log(`Service version: ${SERVICE_VERSION}`);
-});
+// Start a server only when run directly (node server.js).
+// On Vercel the app is imported by api/index.js and served as a function.
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`DB Export service running on port ${PORT}`);
+    console.log(`Service version: ${SERVICE_VERSION}`);
+  });
+}
+
+module.exports = app;
